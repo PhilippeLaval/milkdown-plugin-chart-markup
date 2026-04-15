@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { extractChartBlocks } from 'mdast-util-chart-markup';
-import { configToVisual, visualToConfig } from '@milkdown/plugin-chart-markup-react';
+import { configToVisual, visualToConfig } from '@philippe-laval/plugin-chart-markup-react';
 
 const md = readFileSync('samples/01-basic-bar.md', 'utf8');
 const [block] = extractChartBlocks(md);

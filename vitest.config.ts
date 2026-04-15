@@ -6,8 +6,8 @@ export default defineConfig({
     alias: {
       'micromark-extension-chart-markup': resolve(__dirname, 'packages/micromark-extension-chart-markup/src/index.ts'),
       'mdast-util-chart-markup': resolve(__dirname, 'packages/mdast-util-chart-markup/src/index.ts'),
-      '@milkdown/plugin-chart-markup': resolve(__dirname, 'packages/plugin-chart-markup/src/index.ts'),
-      '@milkdown/plugin-chart-markup-react': resolve(__dirname, 'packages/plugin-chart-markup-react/src/index.tsx'),
+      '@philippe-laval/plugin-chart-markup': resolve(__dirname, 'packages/plugin-chart-markup/src/index.ts'),
+      '@philippe-laval/plugin-chart-markup-react': resolve(__dirname, 'packages/plugin-chart-markup-react/src/index.tsx'),
     },
   },
   test: {

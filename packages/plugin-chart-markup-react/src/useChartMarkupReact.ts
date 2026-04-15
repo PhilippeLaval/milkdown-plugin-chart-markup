@@ -1,4 +1,4 @@
-import { CHART_MARKUP_NODE_NAME, chartMarkupPlugin, type ChartMarkupPluginManifest, type ChartMarkupPluginOptions } from '@milkdown/plugin-chart-markup';
+import { CHART_MARKUP_NODE_NAME, chartMarkupPlugin, type ChartMarkupPluginManifest, type ChartMarkupPluginOptions } from '@philippe-laval/plugin-chart-markup';
 
 /**
  * React bridge: produces a manifest that host apps register into Milkdown via

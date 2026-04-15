@@ -4,8 +4,8 @@ import {
   recordPrintResult,
   serializeBlock,
   updateChartConfig,
-} from '@milkdown/plugin-chart-markup';
-import { createDefaultChartConfig } from '@milkdown/plugin-chart-markup';
+} from '@philippe-laval/plugin-chart-markup';
+import { createDefaultChartConfig } from '@philippe-laval/plugin-chart-markup';
 
 let state = emptyState();
 state = insertChart(state, createDefaultChartConfig());

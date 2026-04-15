@@ -1,15 +1,42 @@
 {
   "name": "mdast-util-chart-markup",
-  "version": "0.1.0",
-  "description": "mdast node, parser, serializer, and remark plugin for chart fenced blocks",
+  "version": "0.2.0",
+  "description": "mdast node, parser, serializer, and remark plugin for `chart` fenced code blocks",
   "license": "MIT",
-  "type": "module",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
-  "exports": {
-    ".": "./src/index.ts"
+  "author": "Philippe Laval",
+  "keywords": [
+    "mdast",
+    "mdast-util",
+    "remark",
+    "remark-plugin",
+    "markdown",
+    "chart",
+    "chart.js",
+    "fenced-code"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PhilippeLaval/milkdown-plugin-chart-markup.git",
+    "directory": "packages/mdast-util-chart-markup"
   },
+  "bugs": {
+    "url": "https://github.com/PhilippeLaval/milkdown-plugin-chart-markup/issues"
+  },
+  "homepage": "https://github.com/PhilippeLaval/milkdown-plugin-chart-markup/tree/main/packages/mdast-util-chart-markup#readme",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run"
@@ -17,5 +44,7 @@
   "dependencies": {
     "micromark-extension-chart-markup": "workspace:*"
   },
-  "files": ["src", "dist"]
+  "publishConfig": {
+    "access": "public"
+  }
 }

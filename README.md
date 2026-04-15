@@ -30,8 +30,8 @@ Monorepo (pnpm workspaces + Turborepo):
 |---|---|
 | `micromark-extension-chart-markup` | Tokenizer — recognizes the `chart` language tag |
 | `mdast-util-chart-markup` | AST node + serializer, with a remark plugin |
-| `@milkdown/plugin-chart-markup` | ProseMirror node, NodeView, commands |
-| `@milkdown/plugin-chart-markup-react` | React toolbar and editor panel |
+| `@philippe-laval/plugin-chart-markup` | ProseMirror node, NodeView, commands |
+| `@philippe-laval/plugin-chart-markup-react` | React toolbar and editor panel |
 
 ## Getting started
 

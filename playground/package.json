@@ -1,6 +1,6 @@
 {
   "name": "chart-markup-playground",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,8 +9,8 @@
     "preview": "vite preview --port 4173"
   },
   "dependencies": {
-    "@milkdown/plugin-chart-markup": "workspace:*",
-    "@milkdown/plugin-chart-markup-react": "workspace:*",
+    "@philippe-laval/plugin-chart-markup": "workspace:*",
+    "@philippe-laval/plugin-chart-markup-react": "workspace:*",
     "chart.js": "^4.4.0",
     "marked": "^18.0.0",
     "mdast-util-chart-markup": "workspace:*",

@@ -31,12 +31,12 @@ import {
   parseChartMarkup,
   type ChartConfig,
 } from 'mdast-util-chart-markup';
-import { ChartToolbar, type ChartType } from '@milkdown/plugin-chart-markup-react';
+import { ChartToolbar, type ChartType } from '@philippe-laval/plugin-chart-markup-react';
 import {
   chartMarkupNodeSpec,
   mountChartNodeView,
   type ChartNodeViewHandle,
-} from '@milkdown/plugin-chart-markup';
+} from '@philippe-laval/plugin-chart-markup';
 import { EditorState } from 'prosemirror-state';
 import { EditorView, type NodeView as PMNodeView } from 'prosemirror-view';
 import { Schema, type Node as PMNode } from 'prosemirror-model';
