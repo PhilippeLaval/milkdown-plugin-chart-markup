@@ -25,7 +25,7 @@ html,
 
 .playground {
   display: grid;
-  grid-template-columns: 260px 1fr 1fr;
+  grid-template-columns: 260px 1fr;
   height: 100vh;
 }
 
@@ -72,28 +72,62 @@ html,
   border-color: var(--accent);
 }
 
-.playground-editor,
-.playground-preview {
-  padding: 1rem;
+.playground-editor {
+  padding: 1rem 2rem;
   overflow-y: auto;
-}
-
-.playground-editor textarea {
-  width: 100%;
-  min-height: 80vh;
-  background: #020617;
-  color: var(--ink);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 1rem;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
-  font-size: 0.85rem;
-  resize: vertical;
 }
 
 .playground-document {
   max-width: 72ch;
   line-height: 1.55;
+  background: #0b1220;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  min-height: 70vh;
+}
+
+.playground-document .ProseMirror {
+  outline: none;
+  min-height: 65vh;
+}
+
+.playground-document .ProseMirror h1 {
+  font-size: 1.6rem;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+  margin: 0 0 0.75rem;
+}
+
+.playground-document .ProseMirror h2 {
+  font-size: 1.25rem;
+  color: var(--accent);
+  margin: 1.2rem 0 0.5rem;
+}
+
+.playground-document .ProseMirror h3 {
+  font-size: 1.05rem;
+  color: var(--accent);
+  margin: 1.2rem 0 0.5rem;
+}
+
+.playground-document .ProseMirror p {
+  margin: 0 0 0.75rem;
+}
+
+.playground-document .ProseMirror code {
+  background: #020617;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.85em;
+  color: var(--accent);
+}
+
+.playground-document .ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .playground-prose {
@@ -240,4 +274,127 @@ html,
 
 .muted {
   color: var(--muted);
+}
+
+.chart-config-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.chart-config-dialog {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: min(720px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.chart-config-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.chart-config-dialog__header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.chart-config-dialog__close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.chart-config-dialog__close:hover {
+  color: var(--ink);
+}
+
+.chart-config-dialog__textarea {
+  flex: 1 1 auto;
+  min-height: 320px;
+  margin: 1rem 1.25rem 0.5rem;
+  padding: 0.85rem 1rem;
+  background: #020617;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  resize: vertical;
+  tab-size: 2;
+}
+
+.chart-config-dialog__textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.chart-config-dialog__error,
+.chart-config-dialog__ok {
+  margin: 0 1.25rem 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chart-config-dialog__error {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: var(--error);
+}
+
+.chart-config-dialog__ok {
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: #34d399;
+}
+
+.chart-config-dialog__footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding: 0.75rem 1.25rem 1rem;
+}
+
+.chart-config-dialog__footer button {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.chart-config-dialog__footer button[data-testid='chart-config-dialog-save'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.chart-config-dialog__footer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

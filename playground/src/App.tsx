@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import {
   Chart,
   BarController,
@@ -22,18 +23,28 @@ import {
   Filler,
 } from 'chart.js';
 import {
-  extractChartBlocks,
+  CHART_MARKUP_NODE_TYPE,
+  canonicalStringify,
   computePrintHash,
+  extractChartBlocks,
   isPrintDrifted,
   parseChartMarkup,
-  type ChartMarkupValue,
-  CHART_MARKUP_NODE_TYPE,
+  type ChartConfig,
 } from 'mdast-util-chart-markup';
-import { ChartToolbar } from '@milkdown/plugin-chart-markup-react';
-import { marked } from 'marked';
+import { ChartToolbar, type ChartType } from '@milkdown/plugin-chart-markup-react';
+import {
+  chartMarkupNodeSpec,
+  mountChartNodeView,
+  type ChartNodeViewHandle,
+} from '@milkdown/plugin-chart-markup';
+import { EditorState } from 'prosemirror-state';
+import { EditorView, type NodeView as PMNodeView } from 'prosemirror-view';
+import { Schema, type Node as PMNode } from 'prosemirror-model';
+import { schema as basicSchema } from 'prosemirror-schema-basic';
+import { keymap } from 'prosemirror-keymap';
+import { baseKeymap } from 'prosemirror-commands';
+import { history, redo, undo } from 'prosemirror-history';
 import { SAMPLES, type Sample } from './samples.js';
-
-marked.setOptions({ gfm: true, breaks: false });
 
 Chart.register(
   BarController,
@@ -57,9 +68,6 @@ Chart.register(
   Filler,
 );
 
-// Vivid palette + high-contrast text so the dark-theme playground produces
-// legible screenshots for the visual E2E proof. Without these, Chart.js's
-// translucent grey defaults vanish against the navy background.
 const PALETTE = ['#38bdf8', '#f472b6', '#fbbf24', '#34d399', '#a78bfa', '#fb923c'];
 Chart.defaults.color = '#e2e8f0';
 Chart.defaults.borderColor = 'rgba(148, 163, 184, 0.35)';
@@ -87,25 +95,323 @@ function applyPalette(config: any) {
   return config;
 }
 
+const schema = new Schema({
+  nodes: (basicSchema.spec.nodes as any).addToEnd('chartMarkup', chartMarkupNodeSpec),
+  marks: basicSchema.spec.marks,
+});
+
+function parseMarkdownToDoc(markdown: string): PMNode {
+  const blocks = extractChartBlocks(markdown);
+  const lines = markdown.split('\n');
+  const nodes: PMNode[] = [];
+  let cursor = 0;
+  for (const block of blocks) {
+    if (block.startLine > cursor) {
+      nodes.push(...proseLinesToNodes(lines.slice(cursor, block.startLine)));
+    }
+    const parsed = block.parsed;
+    if (parsed.type === CHART_MARKUP_NODE_TYPE) {
+      nodes.push(
+        schema.nodes.chartMarkup.create({
+          config: canonicalStringify(parsed.config),
+          print: parsed.print ?? null,
+          printHash: parsed.printHash ?? null,
+        }),
+      );
+    } else {
+      // Keep the bad body verbatim so the NodeView can surface the error state.
+      nodes.push(
+        schema.nodes.chartMarkup.create({
+          config: block.raw,
+          print: null,
+          printHash: null,
+        }),
+      );
+    }
+    cursor = block.endLine + 1;
+  }
+  if (cursor < lines.length) {
+    nodes.push(...proseLinesToNodes(lines.slice(cursor)));
+  }
+  if (nodes.length === 0) {
+    nodes.push(schema.nodes.paragraph.create());
+  }
+  return schema.nodes.doc.create(null, nodes);
+}
+
+function proseLinesToNodes(lines: string[]): PMNode[] {
+  const nodes: PMNode[] = [];
+  let buffer: string[] = [];
+  const flush = () => {
+    const text = buffer.join(' ').trim();
+    if (text) nodes.push(schema.nodes.paragraph.create(null, schema.text(text)));
+    buffer = [];
+  };
+  for (const line of lines) {
+    const heading = /^(#{1,6})\s+(.*)/.exec(line);
+    if (heading) {
+      flush();
+      const level = heading[1]!.length;
+      nodes.push(schema.nodes.heading.create({ level }, schema.text(heading[2]!)));
+      continue;
+    }
+    if (line.trim() === '') {
+      flush();
+    } else {
+      buffer.push(line);
+    }
+  }
+  flush();
+  return nodes;
+}
+
+function computeChartIndex(doc: PMNode, targetPos: number): number {
+  let index = 0;
+  doc.descendants((node, pos) => {
+    if (pos >= targetPos) return false;
+    if (node.type.name === 'chartMarkup') index += 1;
+    return false;
+  });
+  return index;
+}
+
+export interface EditConfigRequest {
+  initial: string;
+  onCommit: (next: string) => void;
+}
+
+export type EditConfigOpener = (request: EditConfigRequest) => void;
+
+class ChartMarkupNodeView implements PMNodeView {
+  dom: HTMLElement;
+  private handle: ChartNodeViewHandle;
+  private toolbarContainer: HTMLDivElement;
+  private toolbarRoot: Root;
+  private node: PMNode;
+  private view: EditorView;
+  private getPos: () => number | undefined;
+  private openEditor: EditConfigOpener;
+
+  constructor(
+    node: PMNode,
+    view: EditorView,
+    getPos: () => number | undefined,
+    openEditor: EditConfigOpener,
+  ) {
+    this.node = node;
+    this.view = view;
+    this.getPos = getPos;
+    this.openEditor = openEditor;
+
+    this.handle = mountChartNodeView(
+      document,
+      {
+        rawJson: node.attrs.config,
+        print: node.attrs.print,
+        printHash: node.attrs.printHash,
+      },
+      {
+        chartFactory: (canvas, config) =>
+          new Chart(canvas, applyPalette(structuredClone(config)) as any) as any,
+        showDriftWarning: true,
+      },
+    );
+    this.dom = this.handle.dom;
+    this.dom.contentEditable = 'false';
+
+    this.toolbarContainer = document.createElement('div');
+    this.dom.appendChild(this.toolbarContainer);
+    this.toolbarRoot = createRoot(this.toolbarContainer);
+
+    this.refreshDomMetadata();
+    this.renderToolbar();
+  }
+
+  private refreshDomMetadata(): void {
+    const pos = this.getPos();
+    const index = pos == null ? 0 : computeChartIndex(this.view.state.doc, pos);
+    this.dom.setAttribute('data-testid', `chart-${index}`);
+
+    const parsed = parseChartMarkup(this.node.attrs.config);
+    if (parsed.type === CHART_MARKUP_NODE_TYPE) {
+      this.dom.setAttribute('data-chart-type', parsed.config.type);
+    } else {
+      this.dom.removeAttribute('data-chart-type');
+    }
+
+    const driftBadge = this.dom.querySelector<HTMLElement>('.chart-markup-drift-badge');
+    if (driftBadge) driftBadge.setAttribute('data-testid', `chart-${index}-drift`);
+  }
+
+  private renderToolbar(): void {
+    const parsed = parseChartMarkup(this.node.attrs.config);
+    if (parsed.type !== CHART_MARKUP_NODE_TYPE) {
+      this.toolbarRoot.render(<></>);
+      return;
+    }
+    const drifted = !!(
+      this.node.attrs.print &&
+      this.node.attrs.printHash &&
+      isPrintDrifted({
+        ...parsed.config,
+        print: this.node.attrs.print,
+        printHash: this.node.attrs.printHash,
+      })
+    );
+    this.toolbarRoot.render(
+      <ChartToolbar
+        config={parsed.config}
+        driftWarning={drifted}
+        onTypeChange={(t) => this.changeType(t)}
+        onEditConfig={() => this.editConfig()}
+        onRefreshPrint={() => this.refreshPrint()}
+        onDelete={() => this.deleteSelf()}
+      />,
+    );
+  }
+
+  private updateAttrs(patch: Partial<PMNode['attrs']>): void {
+    const pos = this.getPos();
+    if (pos == null) return;
+    const tr = this.view.state.tr.setNodeMarkup(pos, undefined, {
+      ...this.node.attrs,
+      ...patch,
+    });
+    this.view.dispatch(tr);
+  }
+
+  private changeType(type: ChartType): void {
+    const parsed = parseChartMarkup(this.node.attrs.config);
+    if (parsed.type !== CHART_MARKUP_NODE_TYPE) return;
+    const nextConfig: ChartConfig = { ...parsed.config, type };
+    this.updateAttrs({
+      config: canonicalStringify(nextConfig),
+      // Any existing print image is now stale; keep the URL so drift surfaces.
+    });
+  }
+
+  private editConfig(): void {
+    this.openEditor({
+      initial: this.node.attrs.config,
+      onCommit: (next) => this.updateAttrs({ config: next }),
+    });
+  }
+
+  private refreshPrint(): void {
+    const parsed = parseChartMarkup(this.node.attrs.config);
+    if (parsed.type !== CHART_MARKUP_NODE_TYPE) return;
+    const pos = this.getPos();
+    const index = pos == null ? 0 : computeChartIndex(this.view.state.doc, pos);
+    this.updateAttrs({
+      print: `https://cdn.example.com/chart-${index}.png`,
+      printHash: computePrintHash(parsed.config),
+    });
+  }
+
+  private deleteSelf(): void {
+    const pos = this.getPos();
+    if (pos == null) return;
+    const tr = this.view.state.tr.delete(pos, pos + this.node.nodeSize);
+    this.view.dispatch(tr);
+  }
+
+  update(next: PMNode): boolean {
+    if (next.type !== this.node.type) return false;
+    const prev = this.node;
+    this.node = next;
+    if (
+      next.attrs.config !== prev.attrs.config ||
+      next.attrs.print !== prev.attrs.print ||
+      next.attrs.printHash !== prev.attrs.printHash
+    ) {
+      this.handle.update(next.attrs.config, next.attrs.print, next.attrs.printHash);
+    }
+    this.refreshDomMetadata();
+    this.renderToolbar();
+    return true;
+  }
+
+  stopEvent(): boolean {
+    // The chart container owns its own pointer interactions (toolbar buttons,
+    // Chart.js tooltips). Don't let ProseMirror reinterpret them as selection
+    // changes.
+    return true;
+  }
+
+  ignoreMutation(): boolean {
+    return true;
+  }
+
+  destroy(): void {
+    this.handle.destroy();
+    const root = this.toolbarRoot;
+    // React warns if unmount happens synchronously inside a render; defer.
+    queueMicrotask(() => root.unmount());
+  }
+}
+
+function createEditorState(doc: PMNode): EditorState {
+  return EditorState.create({
+    doc,
+    plugins: [
+      history(),
+      keymap({ 'Mod-z': undo, 'Mod-y': redo, 'Mod-Shift-z': redo }),
+      keymap(baseKeymap),
+    ],
+  });
+}
+
 export function App(): JSX.Element {
   const [activeId, setActiveId] = useState<Sample['id']>(SAMPLES[0]!.id);
   const active = SAMPLES.find((s) => s.id === activeId) ?? SAMPLES[0]!;
-  const [source, setSource] = useState(active.source);
+  const editorHostRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const [chartCount, setChartCount] = useState(0);
+  const [editRequest, setEditRequest] = useState<EditConfigRequest | null>(null);
+
+  // Kept in a ref so the NodeView factory sees the latest opener without being
+  // re-registered on every render.
+  const openEditorRef = useRef<EditConfigOpener>(() => {});
+  openEditorRef.current = (request) => setEditRequest(request);
 
   useEffect(() => {
-    setSource(active.source);
-  }, [activeId]);
+    if (!editorHostRef.current) return;
+    const view = new EditorView(editorHostRef.current, {
+      state: createEditorState(parseMarkdownToDoc(active.source)),
+      nodeViews: {
+        chartMarkup: (node, nodeView, getPos) =>
+          new ChartMarkupNodeView(node, nodeView, getPos, (r) => openEditorRef.current(r)),
+      },
+      dispatchTransaction(tr) {
+        const next = view.state.apply(tr);
+        view.updateState(next);
+        setChartCount(countCharts(next.doc));
+      },
+    });
+    viewRef.current = view;
+    setChartCount(countCharts(view.state.doc));
+    return () => {
+      view.destroy();
+      viewRef.current = null;
+    };
+    // Mount once — sample switching is handled in a separate effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const segments = useMemo(() => splitDocument(source), [source]);
-  const chartCount = segments.filter((s) => s.type === 'chart').length;
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.updateState(createEditorState(parseMarkdownToDoc(active.source)));
+    setChartCount(countCharts(view.state.doc));
+  }, [activeId]);
 
   return (
     <div className="playground">
       <aside className="playground-sidebar">
         <h1>chart-markup playground</h1>
         <p className="playground-intro">
-          First-class chart blocks in markdown. Edit the source on the left — the canvases on the
-          right re-render live.
+          First-class chart blocks in a ProseMirror editor. Type prose, drag charts, and use the
+          floating toolbar to change type, edit JSON, refresh the print, or delete a block.
         </p>
         <h2>Samples</h2>
         <ul>
@@ -124,156 +430,165 @@ export function App(): JSX.Element {
         </ul>
       </aside>
 
-      <section className="playground-editor">
-        <h2>Source markdown</h2>
-        <textarea
-          data-testid="playground-source"
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-          spellCheck={false}
-          rows={40}
-        />
-      </section>
-
-      <section className="playground-preview">
-        <h2>Rendered markdown</h2>
+      <section className="playground-editor playground-editor--pm">
+        <h2>Document</h2>
         <div data-testid="playground-chart-count" hidden>
           {chartCount}
         </div>
-        <article className="playground-document" data-testid="playground-document">
-          {segments.map((segment, i) => {
-            if (segment.type === 'prose') {
-              return <ProseSegment key={i} markdown={segment.markdown} />;
-            }
-            const chartIndex = segments
-              .slice(0, i + 1)
-              .filter((s) => s.type === 'chart').length - 1;
-            return <ChartBlockView key={i} index={chartIndex} raw={segment.raw} />;
-          })}
-        </article>
+        <div
+          ref={editorHostRef}
+          className="playground-document"
+          data-testid="playground-document"
+        />
       </section>
+
+      {editRequest && (
+        <ChartConfigDialog
+          request={editRequest}
+          onClose={() => setEditRequest(null)}
+        />
+      )}
     </div>
   );
 }
 
-type DocSegment =
-  | { type: 'prose'; markdown: string }
-  | { type: 'chart'; raw: string };
-
-function splitDocument(source: string): DocSegment[] {
-  const blocks = extractChartBlocks(source);
-  const lines = source.split('\n');
-  const segments: DocSegment[] = [];
-  let cursor = 0;
-  for (const block of blocks) {
-    if (block.startLine > cursor) {
-      const proseLines = lines.slice(cursor, block.startLine);
-      const markdown = proseLines.join('\n').trim();
-      if (markdown) segments.push({ type: 'prose', markdown });
-    }
-    segments.push({ type: 'chart', raw: block.raw });
-    cursor = block.endLine + 1;
-  }
-  if (cursor < lines.length) {
-    const markdown = lines.slice(cursor).join('\n').trim();
-    if (markdown) segments.push({ type: 'prose', markdown });
-  }
-  return segments;
-}
-
-function ProseSegment(props: { markdown: string }): JSX.Element {
-  const html = useMemo(() => marked.parse(props.markdown) as string, [props.markdown]);
-  return (
-    <div
-      className="playground-prose"
-      data-testid="prose-segment"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
-}
-
-function ChartBlockView(props: { index: number; raw: string }): JSX.Element {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef = useRef<Chart | null>(null);
-  const parsed = parseChartMarkup(props.raw);
+function ChartConfigDialog(props: {
+  request: EditConfigRequest;
+  onClose: () => void;
+}): JSX.Element {
+  const [draft, setDraft] = useState(() => prettyPrintJson(props.request.initial));
+  const [error, setError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-    if (parsed.type !== CHART_MARKUP_NODE_TYPE) {
-      chartRef.current?.destroy();
-      chartRef.current = null;
+    textareaRef.current?.focus();
+    textareaRef.current?.select();
+  }, []);
+
+  useEffect(() => {
+    setError(validateChartJson(draft));
+  }, [draft]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') props.onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [props]);
+
+  const save = () => {
+    const err = validateChartJson(draft);
+    if (err) {
+      setError(err);
       return;
     }
-    chartRef.current?.destroy();
-    try {
-      chartRef.current = new Chart(canvasRef.current, applyPalette(structuredClone(parsed.config)) as any);
-    } catch (error) {
-      console.error('[playground] chart render failed', error);
-    }
-    return () => {
-      chartRef.current?.destroy();
-      chartRef.current = null;
-    };
-  }, [props.raw]);
-
-  if (parsed.type !== CHART_MARKUP_NODE_TYPE) {
-    return (
-      <div className="chart-markup-block chart-markup-invalid" data-testid={`chart-${props.index}`}>
-        <span className="chart-markup-badge">⚠</span>
-        <pre className="chart-markup-error">Invalid chart config — {parsed.error}</pre>
-      </div>
-    );
-  }
-
-  const full: ChartMarkupValue = {
-    ...parsed.config,
-    print: parsed.print,
-    printHash: parsed.printHash,
+    props.request.onCommit(draft);
+    props.onClose();
   };
-  const drifted = isPrintDrifted(full);
 
   return (
     <div
-      className="chart-markup-block"
-      data-testid={`chart-${props.index}`}
-      data-chart-type={parsed.config.type}
+      className="chart-config-dialog-backdrop"
+      data-testid="chart-config-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Edit chart configuration"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) props.onClose();
+      }}
     >
-      <header className="chart-markup-header">
-        <span className="chart-markup-badge">📊</span>
-        <span className="chart-markup-type">{parsed.config.type}</span>
-        {drifted && (
-          <span className="chart-markup-drift-badge" data-testid={`chart-${props.index}-drift`}>
-            ⚠ Print outdated
-          </span>
+      <div className="chart-config-dialog">
+        <header className="chart-config-dialog__header">
+          <h3>Edit chart JSON</h3>
+          <button
+            type="button"
+            className="chart-config-dialog__close"
+            aria-label="Close"
+            onClick={props.onClose}
+          >
+            ×
+          </button>
+        </header>
+        <textarea
+          ref={textareaRef}
+          data-testid="chart-config-dialog-textarea"
+          className="chart-config-dialog__textarea"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          spellCheck={false}
+          rows={24}
+        />
+        {error ? (
+          <p
+            className="chart-config-dialog__error"
+            data-testid="chart-config-dialog-error"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : (
+          <p className="chart-config-dialog__ok" data-testid="chart-config-dialog-ok">
+            ✓ Valid chart JSON
+          </p>
         )}
-        {parsed.print && (
-          <span className="chart-markup-print-url">
-            print: <code>{parsed.print}</code>
-          </span>
-        )}
-        {parsed.printHash && (
-          <span className="chart-markup-print-hash">
-            recomputed: <code>{computePrintHash(parsed.config)}</code>
-          </span>
-        )}
-      </header>
-      <canvas ref={canvasRef} />
-      <ChartToolbar
-        config={parsed.config}
-        driftWarning={drifted}
-        onTypeChange={() => {
-          /* playground is read-only below the canvas */
-        }}
-        onEditConfig={() => {
-          /* edit in the textarea above */
-        }}
-        onRefreshPrint={() => {
-          /* host responsibility */
-        }}
-        onDelete={() => {
-          /* remove by editing the markdown source */
-        }}
-      />
+        <footer className="chart-config-dialog__footer">
+          <button type="button" onClick={props.onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            data-testid="chart-config-dialog-save"
+            disabled={error != null}
+            onClick={save}
+          >
+            Save
+          </button>
+        </footer>
+      </div>
     </div>
   );
+}
+
+function prettyPrintJson(raw: string): string {
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    // Keep the user's original text so they can fix it in place instead of
+    // losing context to a stringify pass.
+    return raw;
+  }
+}
+
+function validateChartJson(raw: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    return `Invalid JSON: ${(error as Error).message}`;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return 'Chart config must be a JSON object.';
+  }
+  const obj = parsed as Record<string, unknown>;
+  if (typeof obj.type !== 'string' || obj.type.trim() === '') {
+    return 'Missing required string field "type".';
+  }
+  if (!obj.data || typeof obj.data !== 'object' || Array.isArray(obj.data)) {
+    return 'Missing required object field "data".';
+  }
+  const data = obj.data as Record<string, unknown>;
+  if (!Array.isArray(data.datasets)) {
+    return 'Field "data.datasets" must be an array.';
+  }
+  return null;
+}
+
+function countCharts(doc: PMNode): number {
+  let n = 0;
+  doc.descendants((node) => {
+    if (node.type.name === 'chartMarkup') n += 1;
+    return false;
+  });
+  return n;
 }
