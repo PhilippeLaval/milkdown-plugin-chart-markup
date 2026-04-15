@@ -1,0 +1,243 @@
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --ink: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --border: #334155;
+  --error: #f87171;
+  --warn: #facc15;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body,
+html,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.playground {
+  display: grid;
+  grid-template-columns: 260px 1fr 1fr;
+  height: 100vh;
+}
+
+.playground-sidebar {
+  padding: 1.5rem;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.playground-sidebar h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.playground-intro {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.playground-sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.playground-sidebar button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink);
+  padding: 0.5rem;
+  margin-bottom: 0.25rem;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.playground-sidebar button[aria-current='true'] {
+  background: var(--accent);
+  color: #0f172a;
+  border-color: var(--accent);
+}
+
+.playground-editor,
+.playground-preview {
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.playground-editor textarea {
+  width: 100%;
+  min-height: 80vh;
+  background: #020617;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.playground-document {
+  max-width: 72ch;
+  line-height: 1.55;
+}
+
+.playground-prose {
+  color: var(--ink);
+  margin-bottom: 1rem;
+}
+
+.playground-prose h1,
+.playground-prose h2,
+.playground-prose h3,
+.playground-prose h4 {
+  color: var(--accent);
+  margin: 1.2rem 0 0.5rem;
+  font-weight: 600;
+}
+
+.playground-prose h1 {
+  font-size: 1.6rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+}
+
+.playground-prose h2 {
+  font-size: 1.25rem;
+}
+
+.playground-prose h3 {
+  font-size: 1.05rem;
+}
+
+.playground-prose p {
+  margin: 0 0 0.75rem;
+}
+
+.playground-prose code {
+  background: #020617;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.85em;
+  color: var(--accent);
+}
+
+.playground-prose pre {
+  background: #020617;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+
+.playground-prose pre code {
+  background: transparent;
+  padding: 0;
+  color: var(--ink);
+}
+
+.playground-prose ul,
+.playground-prose ol {
+  margin: 0 0 0.75rem 1.25rem;
+  padding: 0;
+}
+
+.playground-prose a {
+  color: var(--accent);
+}
+
+.playground-prose blockquote {
+  border-left: 3px solid var(--border);
+  margin: 0 0 0.75rem;
+  padding: 0.1rem 1rem;
+  color: var(--muted);
+}
+
+.playground-prose hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
+
+.chart-markup-block {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+  background: #0b1220;
+}
+
+.chart-markup-invalid {
+  border-color: var(--error);
+}
+
+.chart-markup-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.chart-markup-badge {
+  font-size: 1rem;
+}
+
+.chart-markup-type {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.chart-markup-drift-badge {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.chart-markup-error {
+  color: var(--error);
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.8rem;
+}
+
+.chart-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+  font-size: 0.8rem;
+}
+
+.chart-toolbar select,
+.chart-toolbar button {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.muted {
+  color: var(--muted);
+}
