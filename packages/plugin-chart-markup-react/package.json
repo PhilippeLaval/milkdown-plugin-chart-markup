@@ -1,0 +1,30 @@
+{
+  "name": "@milkdown/plugin-chart-markup-react",
+  "version": "0.1.0",
+  "description": "React toolbar and editor panel for the chart markup plugin",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "module": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@milkdown/plugin-chart-markup": "workspace:*",
+    "mdast-util-chart-markup": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-dom": { "optional": true }
+  },
+  "files": ["src", "dist"]
+}
