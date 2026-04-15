@@ -47,6 +47,40 @@ importers:
 
   packages/micromark-extension-chart-markup: {}
 
+  packages/milkdown-plugin-chart-markup:
+    dependencies:
+      '@philippe-laval/plugin-chart-markup':
+        specifier: workspace:*
+        version: link:../plugin-chart-markup
+      chart.js:
+        specifier: '>=4.0.0'
+        version: 4.5.1
+      mdast-util-chart-markup:
+        specifier: workspace:*
+        version: link:../mdast-util-chart-markup
+      micromark-extension-chart-markup:
+        specifier: workspace:*
+        version: link:../micromark-extension-chart-markup
+    devDependencies:
+      '@milkdown/core':
+        specifier: ^7.20.0
+        version: 7.20.0
+      '@milkdown/ctx':
+        specifier: ^7.20.0
+        version: 7.20.0
+      '@milkdown/preset-commonmark':
+        specifier: ^7.20.0
+        version: 7.20.0
+      '@milkdown/prose':
+        specifier: ^7.20.0
+        version: 7.20.0
+      '@milkdown/transformer':
+        specifier: ^7.20.0
+        version: 7.20.0
+      '@milkdown/utils':
+        specifier: ^7.20.0
+        version: 7.20.0
+
   packages/plugin-chart-markup:
     dependencies:
       '@milkdown/core':

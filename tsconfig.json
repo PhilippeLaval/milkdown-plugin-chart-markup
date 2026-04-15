@@ -19,7 +19,8 @@
       "micromark-extension-chart-markup": ["./packages/micromark-extension-chart-markup/src/index.ts"],
       "mdast-util-chart-markup": ["./packages/mdast-util-chart-markup/src/index.ts"],
       "@philippe-laval/plugin-chart-markup": ["./packages/plugin-chart-markup/src/index.ts"],
-      "@philippe-laval/plugin-chart-markup-react": ["./packages/plugin-chart-markup-react/src/index.tsx"]
+      "@philippe-laval/plugin-chart-markup-react": ["./packages/plugin-chart-markup-react/src/index.tsx"],
+      "@philippe-laval/milkdown-plugin-chart-markup": ["./packages/milkdown-plugin-chart-markup/src/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*", "playground/src/**/*", "e2e/**/*"]

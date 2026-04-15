@@ -1,0 +1,68 @@
+{
+  "name": "@philippe-laval/milkdown-plugin-chart-markup",
+  "version": "0.1.0",
+  "description": "Turn-key Milkdown plugin that adds first-class chart blocks backed by @philippe-laval/plugin-chart-markup primitives",
+  "license": "MIT",
+  "author": "Philippe Laval",
+  "keywords": [
+    "milkdown",
+    "milkdown-plugin",
+    "prosemirror",
+    "markdown",
+    "chart",
+    "chart.js",
+    "fenced-code"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PhilippeLaval/milkdown-plugin-chart-markup.git",
+    "directory": "packages/milkdown-plugin-chart-markup"
+  },
+  "bugs": {
+    "url": "https://github.com/PhilippeLaval/milkdown-plugin-chart-markup/issues"
+  },
+  "homepage": "https://github.com/PhilippeLaval/milkdown-plugin-chart-markup/tree/main/packages/milkdown-plugin-chart-markup#readme",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@philippe-laval/plugin-chart-markup": "workspace:*",
+    "mdast-util-chart-markup": "workspace:*",
+    "micromark-extension-chart-markup": "workspace:*"
+  },
+  "peerDependencies": {
+    "@milkdown/core": ">=7.0.0",
+    "@milkdown/ctx": ">=7.0.0",
+    "@milkdown/preset-commonmark": ">=7.0.0",
+    "@milkdown/prose": ">=7.0.0",
+    "@milkdown/transformer": ">=7.0.0",
+    "@milkdown/utils": ">=7.0.0",
+    "chart.js": ">=4.0.0"
+  },
+  "devDependencies": {
+    "@milkdown/core": "^7.20.0",
+    "@milkdown/ctx": "^7.20.0",
+    "@milkdown/preset-commonmark": "^7.20.0",
+    "@milkdown/prose": "^7.20.0",
+    "@milkdown/transformer": "^7.20.0",
+    "@milkdown/utils": "^7.20.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
