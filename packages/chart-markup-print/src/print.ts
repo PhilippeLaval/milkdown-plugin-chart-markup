@@ -92,8 +92,11 @@ export function renderChartBlocksAsImages(
 
 function buildAltText(config: ChartConfig): string {
   const datasets = config.data.datasets;
+  let alt: string;
   if (datasets.length === 1 && datasets[0]?.label) {
-    return `${config.type} chart: ${datasets[0].label}`;
+    alt = `${config.type} chart: ${datasets[0].label}`;
+  } else {
+    alt = `${config.type} chart`;
   }
-  return `${config.type} chart`;
+  return alt.replace(/[[\]()]/g, '\\$&');
 }
