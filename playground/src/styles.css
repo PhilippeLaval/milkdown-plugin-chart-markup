@@ -524,9 +524,20 @@ html,
 
 @media print {
   .playground-sidebar,
-  .print-preview-backdrop,
+  .playground-editor,
   .print-preview__header {
     display: none !important;
+  }
+
+  .playground {
+    display: block !important;
+  }
+
+  .print-preview-backdrop {
+    position: static !important;
+    background: none !important;
+    padding: 0 !important;
+    display: block !important;
   }
 
   .print-preview {
@@ -539,5 +550,10 @@ html,
 
   .print-preview__body {
     padding: 0;
+  }
+
+  .print-preview__body img {
+    max-width: 100%;
+    break-inside: avoid;
   }
 }
