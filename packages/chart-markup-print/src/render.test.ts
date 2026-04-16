@@ -31,28 +31,26 @@ describe('renderChartToPng', () => {
     expect(result).toBe('data:image/png;base64,FAKE_PNG');
   });
 
-  it('creates a canvas with default dimensions (800x400 @2x)', () => {
+  it('places the canvas in a hidden DOM container with correct dimensions', () => {
     const { factory, calls } = mockFactory();
     renderChartToPng(barConfig, factory);
     expect(calls).toHaveLength(1);
     const canvas = calls[0]!.canvas;
-    expect(canvas.width).toBe(1600);
-    expect(canvas.height).toBe(800);
+    expect(canvas.parentElement).toBeTruthy();
+    const container = canvas.parentElement!;
+    expect(container.style.width).toBe('800px');
+    expect(container.style.height).toBe('400px');
   });
 
-  it('respects custom width/height/dpr options', () => {
+  it('respects custom width/height options on the container', () => {
     const { factory, calls } = mockFactory();
     renderChartToPng(barConfig, factory, { width: 400, height: 300, devicePixelRatio: 1 });
-    const canvas = calls[0]!.canvas;
-    expect(canvas.width).toBe(400);
-    expect(canvas.height).toBe(300);
+    const container = calls[0]!.canvas.parentElement!;
+    expect(container.style.width).toBe('400px');
+    expect(container.style.height).toBe('300px');
   });
 
   it('destroys the chart instance after capturing', () => {
-    const { factory, calls } = mockFactory();
-    renderChartToPng(barConfig, factory);
-    // The factory returns a mock — check destroy was called via the calls array
-    // We need to access the chart instance; let's track it differently
     const destroyFn = vi.fn();
     const trackingFactory: ChartJsFactory = (canvas, config) => ({
       toBase64Image: () => 'data:image/png;base64,X',
@@ -62,9 +60,20 @@ describe('renderChartToPng', () => {
     expect(destroyFn).toHaveBeenCalledOnce();
   });
 
-  it('passes the config to the factory unchanged', () => {
+  it('injects animation:false and devicePixelRatio into the config', () => {
     const { factory, calls } = mockFactory();
     renderChartToPng(barConfig, factory);
-    expect(calls[0]!.config).toBe(barConfig);
+    const config = calls[0]!.config;
+    expect(config.type).toBe('bar');
+    expect(config.data).toEqual(barConfig.data);
+    expect((config.options as any)?.animation).toBe(false);
+    expect((config.options as any)?.devicePixelRatio).toBe(2);
+  });
+
+  it('cleans up the container from the DOM after rendering', () => {
+    const { factory } = mockFactory();
+    const beforeCount = document.body.children.length;
+    renderChartToPng(barConfig, factory);
+    expect(document.body.children.length).toBe(beforeCount);
   });
 });
