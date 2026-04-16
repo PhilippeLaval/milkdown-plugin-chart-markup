@@ -1,6 +1,6 @@
 {
   "name": "@philippe-laval/chart-markup-print",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Render chart markup blocks to PNG — for print, export, and Typora preview",
   "license": "MIT",
   "author": "Philippe Laval",
