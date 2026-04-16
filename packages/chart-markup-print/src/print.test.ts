@@ -136,6 +136,20 @@ describe('renderChartBlocksAsImages', () => {
     expect(result).toContain('![bar chart]');
   });
 
+  it('escapes parentheses in dataset labels so the image tag stays valid', () => {
+    const md = `\`\`\`chart
+{
+  "type": "bar",
+  "data": {
+    "labels": ["Q1"],
+    "datasets": [{ "label": "ARR (€M)", "data": [12] }]
+  }
+}
+\`\`\``;
+    const result = renderChartBlocksAsImages(md, fakePrintOptions());
+    expect(result).toContain('![bar chart: ARR \\(€M\\)](data:image/png;base64,RENDERED)');
+  });
+
   it('leaves invalid chart blocks untouched', () => {
     const result = renderChartBlocksAsImages(invalidChartMd, fakePrintOptions());
     expect(result).toBe(invalidChartMd);
