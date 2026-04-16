@@ -363,16 +363,31 @@ function createEditorState(doc: PMNode): EditorState {
 
 export function App(): JSX.Element {
   const [activeId, setActiveId] = useState<Sample['id']>(SAMPLES[0]!.id);
-  const active = SAMPLES.find((s) => s.id === activeId) ?? SAMPLES[0]!;
+  const [localFile, setLocalFile] = useState<{ name: string; source: string } | null>(null);
+  const active = localFile
+    ? { id: '__local__', title: localFile.name, source: localFile.source }
+    : SAMPLES.find((s) => s.id === activeId) ?? SAMPLES[0]!;
   const editorHostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [chartCount, setChartCount] = useState(0);
   const [editRequest, setEditRequest] = useState<EditConfigRequest | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Kept in a ref so the NodeView factory sees the latest opener without being
   // re-registered on every render.
   const openEditorRef = useRef<EditConfigOpener>(() => {});
   openEditorRef.current = (request) => setEditRequest(request);
+
+  const handleFileOpen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    file.text().then((text) => {
+      setLocalFile({ name: file.name, source: text });
+      setActiveId('__local__');
+    });
+    // Reset so the same file can be re-selected
+    e.target.value = '';
+  };
 
   useEffect(() => {
     if (!editorHostRef.current) return;
@@ -403,7 +418,7 @@ export function App(): JSX.Element {
     if (!view) return;
     view.updateState(createEditorState(parseMarkdownToDoc(active.source)));
     setChartCount(countCharts(view.state.doc));
-  }, [activeId]);
+  }, [activeId, localFile]);
 
   return (
     <div className="playground">
@@ -413,6 +428,36 @@ export function App(): JSX.Element {
           First-class chart blocks in a ProseMirror editor. Type prose, drag charts, and use the
           floating toolbar to change type, edit JSON, refresh the print, or delete a block.
         </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".md,.markdown,text/markdown"
+          hidden
+          onChange={handleFileOpen}
+        />
+        <button
+          type="button"
+          className="playground-open-file"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Open file&hellip;
+        </button>
+        {localFile && (
+          <>
+            <h2>Loaded file</h2>
+            <ul>
+              <li>
+                <button
+                  type="button"
+                  aria-current={activeId === '__local__'}
+                  onClick={() => setActiveId('__local__')}
+                >
+                  {localFile.name}
+                </button>
+              </li>
+            </ul>
+          </>
+        )}
         <h2>Samples</h2>
         <ul>
           {SAMPLES.map((s) => (
@@ -420,8 +465,11 @@ export function App(): JSX.Element {
               <button
                 type="button"
                 data-testid={`sample-${s.id}`}
-                aria-current={s.id === activeId}
-                onClick={() => setActiveId(s.id)}
+                aria-current={s.id === activeId && !localFile}
+                onClick={() => {
+                  setLocalFile(null);
+                  setActiveId(s.id);
+                }}
               >
                 {s.title}
               </button>
