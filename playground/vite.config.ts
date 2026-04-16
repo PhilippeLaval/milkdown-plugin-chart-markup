@@ -12,6 +12,7 @@ export default defineConfig({
       'mdast-util-chart-markup': resolve(root, 'packages/mdast-util-chart-markup/src/index.ts'),
       '@philippe-laval/plugin-chart-markup': resolve(root, 'packages/plugin-chart-markup/src/index.ts'),
       '@philippe-laval/plugin-chart-markup-react': resolve(root, 'packages/plugin-chart-markup-react/src/index.tsx'),
+      '@philippe-laval/chart-markup-print': resolve(root, 'packages/chart-markup-print/src/index.ts'),
     },
   },
   server: {

@@ -1,0 +1,57 @@
+{
+  "name": "@philippe-laval/chart-markup-print",
+  "version": "0.1.0",
+  "description": "Render chart markup blocks to PNG — for print, export, and Typora preview",
+  "license": "MIT",
+  "author": "Philippe Laval",
+  "keywords": [
+    "chart",
+    "chart.js",
+    "markdown",
+    "print",
+    "png",
+    "export",
+    "typora"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PhilippeLaval/milkdown-plugin-chart-markup.git",
+    "directory": "packages/chart-markup-print"
+  },
+  "bugs": {
+    "url": "https://github.com/PhilippeLaval/milkdown-plugin-chart-markup/issues"
+  },
+  "homepage": "https://github.com/PhilippeLaval/milkdown-plugin-chart-markup/tree/main/packages/chart-markup-print#readme",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "mdast-util-chart-markup": "workspace:*"
+  },
+  "peerDependencies": {
+    "chart.js": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "chart.js": {
+      "optional": false
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

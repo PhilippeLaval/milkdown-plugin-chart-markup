@@ -32,6 +32,7 @@ import {
   type ChartConfig,
 } from 'mdast-util-chart-markup';
 import { ChartToolbar, type ChartType } from '@philippe-laval/plugin-chart-markup-react';
+import { renderChartToPng } from '@philippe-laval/chart-markup-print';
 import {
   chartMarkupNodeSpec,
   mountChartNodeView,
@@ -44,6 +45,7 @@ import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap } from 'prosemirror-commands';
 import { history, redo, undo } from 'prosemirror-history';
+import { marked } from 'marked';
 import { SAMPLES, type Sample } from './samples.js';
 
 Chart.register(
@@ -371,12 +373,43 @@ export function App(): JSX.Element {
   const viewRef = useRef<EditorView | null>(null);
   const [chartCount, setChartCount] = useState(0);
   const [editRequest, setEditRequest] = useState<EditConfigRequest | null>(null);
+  const [printHtml, setPrintHtml] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Kept in a ref so the NodeView factory sees the latest opener without being
   // re-registered on every render.
   const openEditorRef = useRef<EditConfigOpener>(() => {});
   openEditorRef.current = (request) => setEditRequest(request);
+
+  const openPrintPreview = () => {
+    const view = viewRef.current;
+    if (!view) return;
+    const md = serializeDocToMarkdown(view.state.doc);
+    const blocks = extractChartBlocks(md);
+    const lines = md.split('\n');
+
+    // Process blocks in reverse so line-number splicing stays valid.
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      const block = blocks[i]!;
+      if (block.parsed.type !== CHART_MARKUP_NODE_TYPE) continue;
+      const config = (block.parsed as any).config as ChartConfig;
+
+      const dataUrl = renderChartToPng(
+        config,
+        (canvas, cfg) => new Chart(canvas, applyPalette(structuredClone(cfg)) as any) as any,
+      );
+
+      const datasets = config.data?.datasets ?? [];
+      const alt = datasets.length === 1 && datasets[0]?.label
+        ? `${config.type} chart: ${datasets[0].label}`
+        : `${config.type} chart`;
+      lines.splice(block.startLine, block.endLine - block.startLine + 1, `![${alt}](${dataUrl})`);
+    }
+
+    const printMd = lines.join('\n');
+    const html = marked.parse(printMd) as string;
+    setPrintHtml(html);
+  };
 
   const handleFileOpen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -476,6 +509,14 @@ export function App(): JSX.Element {
             </li>
           ))}
         </ul>
+        <h2>Export</h2>
+        <button
+          type="button"
+          data-testid="print-preview-btn"
+          onClick={openPrintPreview}
+        >
+          Print Preview
+        </button>
       </aside>
 
       <section className="playground-editor playground-editor--pm">
@@ -495,6 +536,10 @@ export function App(): JSX.Element {
           request={editRequest}
           onClose={() => setEditRequest(null)}
         />
+      )}
+
+      {printHtml && (
+        <PrintPreview html={printHtml} onClose={() => setPrintHtml(null)} />
       )}
     </div>
   );
@@ -598,6 +643,52 @@ function ChartConfigDialog(props: {
   );
 }
 
+function PrintPreview(props: { html: string; onClose: () => void }): JSX.Element {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') props.onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [props]);
+
+  return (
+    <div
+      className="print-preview-backdrop"
+      data-testid="print-preview"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) props.onClose();
+      }}
+    >
+      <div className="print-preview">
+        <header className="print-preview__header">
+          <h3>Print Preview</h3>
+          <div className="print-preview__actions">
+            <button
+              type="button"
+              onClick={() => window.print()}
+            >
+              Print
+            </button>
+            <button
+              type="button"
+              className="print-preview__close"
+              aria-label="Close"
+              onClick={props.onClose}
+            >
+              ×
+            </button>
+          </div>
+        </header>
+        <div
+          className="print-preview__body"
+          dangerouslySetInnerHTML={{ __html: props.html }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function prettyPrintJson(raw: string): string {
   try {
     return JSON.stringify(JSON.parse(raw), null, 2);
@@ -639,4 +730,19 @@ function countCharts(doc: PMNode): number {
     return false;
   });
   return n;
+}
+
+function serializeDocToMarkdown(doc: PMNode): string {
+  const parts: string[] = [];
+  doc.forEach((node) => {
+    if (node.type.name === 'chartMarkup') {
+      parts.push('```chart\n' + node.attrs.config + '\n```');
+    } else if (node.type.name === 'heading') {
+      const level = node.attrs.level as number;
+      parts.push('#'.repeat(level) + ' ' + node.textContent);
+    } else {
+      parts.push(node.textContent);
+    }
+  });
+  return parts.join('\n\n');
 }

@@ -2,7 +2,7 @@
 
 A Milkdown plugin that adds first-class chart support via fenced ` ```chart ` code blocks containing Chart.js configuration. Renders live in the editor and embeds a pre-rendered PNG URL (`print`) for PDF/PPTX export pipelines.
 
-> **Status:** v0.1.0 first version — 4 packages, Vite+React playground, 65 unit tests and 7 hand-to-hand Playwright tests. See [`specs/milkdown-chart-markup-spec.md`](specs/milkdown-chart-markup-spec.md) for the full developer specification.
+> **Status:** v0.1.0 first version — 5 packages, Vite+React playground, 110 unit tests and 7 hand-to-hand Playwright tests. See [`specs/milkdown-chart-markup-spec.md`](specs/milkdown-chart-markup-spec.md) for the full developer specification.
 > **Modelled on:** [`milkdown-plugin-critic-markup`](https://github.com/PhilippeLaval/milkdown-plugin-critic-markup)
 > **Target:** Milkdown v7+, TypeScript, React
 
@@ -32,6 +32,7 @@ Monorepo (pnpm workspaces + Turborepo):
 | `mdast-util-chart-markup` | AST node + serializer, with a remark plugin |
 | `@philippe-laval/plugin-chart-markup` | ProseMirror node, NodeView, commands |
 | `@philippe-laval/plugin-chart-markup-react` | React toolbar and editor panel |
+| `@philippe-laval/chart-markup-print` | Render chart blocks to PNG for print / export |
 
 ## Getting started
 
@@ -54,9 +55,37 @@ pnpm showboat:verify # re-run the executable walkthrough at showboat/walkthrough
 | `samples/03-with-print-url.md` | `print` URL + intentionally-stale `printHash` to show the drift warning |
 | `samples/04-invalid-json.md` | Malformed JSON rendered as an inline error state |
 
+## Print / Export
+
+The `@philippe-laval/chart-markup-print` package renders `chart` blocks to PNG images. It works in any environment with a DOM canvas (browser, Electron, React apps).
+
+### API
+
+```typescript
+import { renderChartToPng, renderChartBlocksForPrint, renderChartBlocksAsImages } from '@philippe-laval/chart-markup-print';
+import { Chart, /* register controllers */ } from 'chart.js';
+
+// 1. Render a single chart config to a PNG data URL
+const dataUrl = renderChartToPng(config, (canvas, cfg) => new Chart(canvas, cfg));
+
+// 2. Process markdown: update print + printHash fields in every chart block
+const updatedMd = renderChartBlocksForPrint(markdown, {
+  chartFactory: (canvas, cfg) => new Chart(canvas, cfg),
+});
+
+// 3. Process markdown: replace chart blocks with ![alt](data:image/png;...) image tags
+const printableMd = renderChartBlocksAsImages(markdown, {
+  chartFactory: (canvas, cfg) => new Chart(canvas, cfg),
+});
+```
+
+### Playground Print Preview
+
+Click **Print Preview** in the playground sidebar to render the current document with all charts converted to inline PNG images. Use the **Print** button (or `Ctrl+P` / `Cmd+P`) to send it to the browser's print dialog.
+
 ## Tests
 
-- **Unit:** 65 Vitest tests across all four packages — canonical stringifier, pure SHA-256, parse/serialize round-trip, drift detection, pure command layer, node-view DOM, React visual↔config projection.
+- **Unit:** 110 Vitest tests across all five packages — canonical stringifier, pure SHA-256, parse/serialize round-trip, drift detection, pure command layer, node-view DOM, React visual↔config projection, print rendering and markdown processing.
 - **Hand-to-hand:** 7 Playwright tests in `e2e/` drive the playground in Chromium: sample loading, three-chart rendering, drift badge, error state, live textarea edits, sample switching, toolbar presence.
 - **Walkthrough:** `showboat/walkthrough.md` is an executable demo document. `pnpm showboat:verify` re-runs every code block and diffs the output.
 
